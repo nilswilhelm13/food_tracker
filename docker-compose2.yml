@@ -1,0 +1,48 @@
+version: "3"
+
+services:
+  web:
+    image: nilswilhelm/foodtracker_backend
+    expose:
+      - 9000
+    environment:
+      HTTP_PORT: 9000
+      VIRTUAL_HOST: foodtracker.nilswilhelm.net
+      LETSENCRYPT_HOST: foodtracker.nilswilhelm.net
+      LETSENCRYPT_EMAIL: "admin@nilswilhelm.net"
+    networks:
+      service_network:
+
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    ports:
+      - 80:80
+      - 443:443
+    container_name: nginx-proxy
+    networks:
+      service_network:
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - nginx-certs:/etc/nginx/certs
+      - nginx-vhost:/etc/nginx/vhost.d
+      - nginx-html:/usr/share/nginx/html
+
+  nginx-proxy-letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    environment:
+      NGINX_PROXY_CONTAINER: "nginx-proxy"
+    networks:
+      service_network:
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - nginx-certs:/etc/nginx/certs
+      - nginx-vhost:/etc/nginx/vhost.d
+      - nginx-html:/usr/share/nginx/html
+
+networks:
+  service_network:
+
+volumes:
+  nginx-certs:
+  nginx-vhost:
+  nginx-html:

@@ -1,0 +1,77 @@
+version: "3"
+
+services:
+
+  web:
+    image: nilswilhelm/foodtracker_frontend
+    restart: unless-stopped
+    build:
+      ./frontend
+    expose:
+      - 80
+    environment:
+      HTTP_PORT: 80
+      VIRTUAL_HOST: foodtracker.nilswilhelm.net
+      LETSENCRYPT_HOST: foodtracker.nilswilhelm.net
+      LETSENCRYPT_EMAIL: "admin@nilswilhelm.net"
+    networks:
+      service_network:
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+
+  backend:
+    image: nilswilhelm/foodtracker_backend
+    restart: unless-stopped
+    build:
+      ./backend
+  #  ports:
+    #  - "27015:27015"
+    #  - "27016:27016"
+    #  - "27017:27017"
+    #  - "9000:9000"
+    expose:
+      - 9000
+    environment:
+      HTTP_PORT: 9000
+      VIRTUAL_HOST: backend.nilswilhelm.net
+      LETSENCRYPT_HOST: backend.nilswilhelm.net
+      LETSENCRYPT_EMAIL: "admin@nilswilhelm.net"
+    networks:
+      service_network:
+
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 443:443
+      - 9000:9000
+    container_name: nginx-proxy
+    networks:
+      service_network:
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - nginx-certs:/etc/nginx/certs
+      - nginx-vhost:/etc/nginx/vhost.d
+      - nginx-html:/usr/share/nginx/html
+
+  nginx-proxy-letsencrypt:
+    restart: unless-stopped
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    environment:
+      NGINX_PROXY_CONTAINER: "nginx-proxy"
+    networks:
+      service_network:
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - nginx-certs:/etc/nginx/certs
+      - nginx-vhost:/etc/nginx/vhost.d
+      - nginx-html:/usr/share/nginx/html
+
+networks:
+  service_network:
+
+volumes:
+  nginx-certs:
+  nginx-vhost:
+  nginx-html:
